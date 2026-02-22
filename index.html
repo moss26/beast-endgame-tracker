@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>MrBeast Puzzle Endgame Tracker</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css" />
+    <style>
+        body { font-family: sans-serif; margin: 20px; background: #f4f4f4; }
+        #map { height: 500px; width: 100%; border-radius: 10px; margin-bottom: 20px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); }
+        .container { background: white; padding: 20px; border-radius: 10px; }
+        h1 { color: #2d3436; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>🌍 MrBeast Million Dollar Puzzle: Itinerary Map</h1>
+    <div id="map"></div>
+
+    <h1>📊 Location Master Data</h1>
+    <table id="locationTable" class="display" style="width:100%">
+        <thead>
+            <tr>
+                <th>Step</th><th>Stage</th><th>City</th><th>First</th><th>Last</th><th>Caption</th><th>Lat</th><th>Long</th>
+            </tr>
+        </thead>
+        <tbody></tbody>
+    </table>
+</div>
+
+<script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+
+<script>
+    // 1. Initialize the Map
+    const map = L.map('map').setView([20, 0], 2);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+
+    // 2. Load the CSV Data
+    // Ensure your CSV filename matches exactly here:
+    const csvUrl = 'Enriched_MrBeast_Data.csv'; 
+
+    Papa.parse(csvUrl, {
+        download: true,
+        header: true,
+        complete: function(results) {
+            const data = results.data;
+            const tableBody = $('#locationTable tbody');
+            let pathCoords = [];
+
+            data.forEach((row, index) => {
+                if (row.City && row.Latitude && row.Longitude) {
+                    // Add to Table
+                    tableBody.append(`
+                        <tr>
+                            <td>${index + 1}</td>
+                            <td>${row.Stage || ''}</td>
+                            <td>${row.City}</td>
+                            <td><b>${row.First || ''}</b></td>
+                            <td><b>${row.Last || ''}</b></td>
+                            <td>${row.Caption || ''}</td>
+                            <td>${row.Latitude}</td>
+                            <td>${row.Longitude}</td>
+                        </tr>
+                    `);
+
+                    // Add to Map
+                    const lat = parseFloat(row.Latitude);
+                    const lng = parseFloat(row.Longitude);
+                    const markerColor = row.Stage === 'Stage 1' ? 'blue' : 'red';
+                    
+                    L.circleMarker([lat, lng], {
+                        color: markerColor,
+                        radius: 6
+                    }).addTo(map).bindPopup(`<b>${row.City}</b><br>${row.Caption || ''}`);
+
+                    pathCoords.push([lat, lng]);
+                }
+            });
+
+            // 3. DRAW THE PATH (The Endgame Clue!)
+            // This connects the dots in order to show the hidden word
+            L.polyline(pathCoords, {color: 'green', weight: 3, opacity: 0.6}).addTo(map);
+
+            // 4. Initialize Searchable Table
+            $('#locationTable').DataTable({ "pageLength": 25 });
+        }
+    });
+</script>
+</body>
+</html>
