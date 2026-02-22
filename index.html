@@ -6,18 +6,19 @@
     <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css" />
     <style>
         body { font-family: sans-serif; margin: 20px; background: #f4f4f4; }
-        #map { height: 500px; width: 100%; border-radius: 10px; margin-bottom: 20px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); }
-        .container { background: white; padding: 20px; border-radius: 10px; }
-        h1 { color: #2d3436; }
+        #map { height: 600px; width: 100%; border-radius: 10px; margin-bottom: 20px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); }
+        .container { background: white; padding: 30px; border-radius: 10px; }
+        h1 { color: #2d3436; margin-bottom: 10px; }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <h1>🌍 MrBeast Million Dollar Puzzle: Itinerary Map</h1>
+    <h1>🌍 Million Dollar Puzzle: Boat Itinerary</h1>
+    <p>Lines represent the "Stick In-Between" path from the riddle.</p>
     <div id="map"></div>
 
-    <h1>📊 Location Master Data</h1>
+    <h1>📊 91-Row Master Data</h1>
     <table id="locationTable" class="display" style="width:100%">
         <thead>
             <tr>
@@ -34,17 +35,25 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
 
 <script>
-    // 1. Initialize the Map
-    const map = L.map('map').setView([20, 0], 2);
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+    // 1. Initialize Map WITH REPEAT DISABLED
+    const map = L.map('map', {
+        worldCopyJump: false, // Prevents jumping between copies of the world
+        maxBounds: [[-90, -180], [90, 180]], // Limits the map to one world view
+        maxBoundsViscosity: 1.0 
+    }).setView([20, 0], 2);
 
-    // 2. Load the CSV Data
-    // Ensure your CSV filename matches exactly here:
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        noWrap: true, // THIS STOPS THE REPEATING WORLD
+        bounds: [[-90, -180], [90, 180]]
+    }).addTo(map);
+
+    // 2. Load Data (Double check your filename here!)
     const csvUrl = 'Enriched_MrBeast_Locations.csv'; 
 
     Papa.parse(csvUrl, {
         download: true,
         header: true,
+        skipEmptyLines: true,
         complete: function(results) {
             const data = results.data;
             const tableBody = $('#locationTable tbody');
@@ -52,7 +61,6 @@
 
             data.forEach((row, index) => {
                 if (row.City && row.Latitude && row.Longitude) {
-                    // Add to Table
                     tableBody.append(`
                         <tr>
                             <td>${index + 1}</td>
@@ -66,25 +74,29 @@
                         </tr>
                     `);
 
-                    // Add to Map
                     const lat = parseFloat(row.Latitude);
                     const lng = parseFloat(row.Longitude);
-                    const markerColor = row.Stage === 'Stage 1' ? 'blue' : 'red';
+                    const dotColor = row.Stage === 'Stage 1' ? '#0984e3' : '#d63031';
                     
                     L.circleMarker([lat, lng], {
-                        color: markerColor,
-                        radius: 6
+                        color: dotColor,
+                        fillOpacity: 0.8,
+                        radius: 4 // Smaller dots
                     }).addTo(map).bindPopup(`<b>${row.City}</b><br>${row.Caption || ''}`);
 
                     pathCoords.push([lat, lng]);
                 }
             });
 
-            // 3. DRAW THE PATH (The Endgame Clue!)
-            // This connects the dots in order to show the hidden word
-            L.polyline(pathCoords, {color: 'green', weight: 3, opacity: 0.6}).addTo(map);
+            // 3. THIN, CLEAN LINES
+            // Connecting the dots to reveal the word
+            L.polyline(pathCoords, {
+                color: '#636e72', 
+                weight: 1.5, // MUCH THINNER LINE
+                opacity: 0.5,
+                smoothFactor: 1
+            }).addTo(map);
 
-            // 4. Initialize Searchable Table
             $('#locationTable').DataTable({ "pageLength": 25 });
         }
     });
